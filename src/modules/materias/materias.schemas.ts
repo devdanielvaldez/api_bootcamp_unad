@@ -10,4 +10,22 @@ const MateriasSchema: Schema = new Schema({
 
 const Materias: Model<any> = model('Materias', MateriasSchema);
 
-export default Materias;
+export enum STATUS_MATERIAS {
+    COMPLETE = 'COMPLETE',
+    INCOMPLETE = 'INCOMPLETE',
+    IN_PROGRESS = 'IN_PROGRESS'
+}
+
+const RecordDeNotasSchema: Schema = new Schema({
+    materia: { type: Schema.Types.ObjectId, ref: 'Materias' },
+    status: { type: String, enum: STATUS_MATERIAS },
+},
+{ timestamps: true }
+);
+
+const RecordDeNotas: Model<any> = model('RecordDeNotas', RecordDeNotasSchema);
+
+export {
+    Materias,
+    RecordDeNotas
+};

@@ -14,7 +14,11 @@ const UsersSchema: Schema = new Schema({
     matricula: { type: String, required: true, maxlength: 8, minlength: 8 },
     email: { type: String },
     password: { type: String, required: true },
-    materias: [{ type: Schema.Types.ObjectId, ref: 'Materias' }]
+    materias: [{ type: Schema.Types.ObjectId, ref: 'Materias' }],
+    recordDeNotas: [{
+        type: Schema.Types.ObjectId,
+        ref: 'RecordDeNotas'
+    }]
 },
 
 { timestamps: true }

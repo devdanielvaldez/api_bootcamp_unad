@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import MateriasSchema from "./materias.schemas";
+import { Materias, RecordDeNotas, STATUS_MATERIAS } from "./materias.schemas";
 import UsersSchema from "../auth/users.schemas";
 
 interface IMaterias {
@@ -13,7 +13,7 @@ const registerMaterias = async (req: Request, res: Response) => {
     const body: IMaterias = req.body;
     const { codigo, nombre, creditos } = body;
 
-    MateriasSchema.findOne({ codigoMateria: codigo }).exec((err: any, doc: any) => {
+    Materias.findOne({ codigoMateria: codigo }).exec((err: any, doc: any) => {
       if (err)
         return res.status(400).json({
           ok: false,
@@ -27,7 +27,7 @@ const registerMaterias = async (req: Request, res: Response) => {
           message: "La materia ya existe",
         });
 
-      const saveMateria = new MateriasSchema({
+      const saveMateria = new Materias({
         codigoMateria: codigo,
         nombre: nombre,
         creditos: +creditos,
@@ -74,7 +74,7 @@ const addMaterias = async (req: Request, res: Response) => {
             message: "El estudiante no existe",
           });
 
-        MateriasSchema.findById(materiaId).exec((err: any, doc: any) => {
+        Materias.findById(materiaId).exec((err: any, doc: any) => {
           if (err)
             return res.status(400).json({
               ok: false,
@@ -100,11 +100,34 @@ const addMaterias = async (req: Request, res: Response) => {
                   "Error inesperado, contacto al administrador del sistema",
               });
 
-            res.status(200).json({
-              ok: true,
-              message: "Materia agregada correctamente",
-              data: doc,
+            const record = new RecordDeNotas({
+              materia: materiaId
             });
+
+            record.save((err: any, doc: any) => {
+              if(err) return res.status(400).json({
+                ok: false,
+                message: 'Error inesperado'
+              });
+
+              UsersSchema.findByIdAndUpdate(
+                studentId,
+                { $push: { recordDeNotas: doc._id } },
+                { new: true }
+              )
+              .exec((err: any, doc: any) => {
+                if(err) return res.status(400).json({
+                  ok: false,
+                  message: 'Error inesperado'
+                });
+
+                res.status(200).json({
+                  ok: true,
+                  message: "Materia agregada correctamente",
+                  data: doc,
+                });
+              })
+            })
           });
         });
       });
@@ -155,14 +178,14 @@ const getAll = async(req: Request, res: Response) => {
     let perPage = +query.limit,
         page = Math.max(0, (+query.page - 1));
 
-    await MateriasSchema.find()
+    await Materias.find()
     .skip(perPage * page)
     .limit(perPage)
     .sort({
       nombre: 'desc'
     })
     .exec((err: any, doc: any) => {
-      MateriasSchema
+      Materias
       .count()
       .exec((err: any, count: any) => {
         res.status(200).json({
@@ -186,4 +209,70 @@ const getAll = async(req: Request, res: Response) => {
   }
 }
 
-export { registerMaterias, addMaterias, getMateriasByStudent, getAll };
+const getNotasByStudent = async(req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+    UsersSchema.findById(studentId)
+    .populate({
+      path: "recordDeNotas",
+      populate: {
+        path: "materia",
+      }
+    })
+    .exec((err: any, doc: any) => {
+      if(err) return res.status(400).json({
+        ok: false,
+        message: "Error inesperado, contacto al administrador del sistema",
+      });
+
+      if(doc === null) return res.status(404).json({
+        ok: false,
+        message: "El estudiante no existe",
+      });
+
+      res.status(200).json({
+        ok: true,
+        data: doc.recordDeNotas
+      })
+    })
+  } catch(err) {
+      return res.status(500).json({
+      ok: false,
+      message: "Error inesperado, contacto al administrador del sistema",
+      error: err
+    });
+  }
+}
+
+const updateStatus = async(req: Request, res: Response) => {
+  try {
+    const { recordId } = req.params;
+    const { status } = req.body;
+
+    RecordDeNotas.findByIdAndUpdate(recordId, req.body, { new: true }).exec((err: any, doc: any) => {
+      console.log(err)
+      if(err) return res.status(400).json({
+        ok: false,
+        message: "Error inesperado, contacto al administrador del sistema",
+        error: err
+      });
+
+      res.status(200).json({
+        ok: true,
+        message: "Status actualizado correctamente",
+        data: doc
+      });
+    })
+
+  } catch(err) {
+    return res.status(500).json({
+      ok: false,
+      message: "Error inesperado, contacto al administrador del sistema",
+      error: err
+    });
+  }
+}
+
+
+
+export { registerMaterias, addMaterias, getMateriasByStudent, getAll, getNotasByStudent, updateStatus };
