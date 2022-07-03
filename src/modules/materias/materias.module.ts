@@ -145,4 +145,45 @@ const getMateriasByStudent = async (req: Request, res: Response) => {
     }
 }
 
-export { registerMaterias, addMaterias, getMateriasByStudent };
+const getAll = async(req: Request, res: Response) => {
+  try {
+    let query = {
+      page: req.query.page || 1,
+      limit: req.query.limit || 10,
+    };
+
+    let perPage = +query.limit,
+        page = Math.max(0, (+query.page - 1));
+
+    await MateriasSchema.find()
+    .skip(perPage * page)
+    .limit(perPage)
+    .sort({
+      nombre: 'desc'
+    })
+    .exec((err: any, doc: any) => {
+      MateriasSchema
+      .count()
+      .exec((err: any, count: any) => {
+        res.status(200).json({
+          ok: true,
+          data: doc,
+          pagination: {
+            page: +query.page,
+            limit: +query.limit,
+            total: count,
+            pages: Math.round(count / perPage)
+          }
+        })
+      })
+    })
+  } catch(err) {
+    return res.status(500).json({
+      ok: false,
+      message: "Error inesperado, contacto al administrador del sistema",
+      error: err
+    });
+  }
+}
+
+export { registerMaterias, addMaterias, getMateriasByStudent, getAll };
