@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 mongoose.connect('mongodb+srv://admin:admin@developcluster.k3bpf.mongodb.net/unad?retryWrites=true&w=majority', (err) => {
     if(err) return console.log(err, 'error al conectarme');
 
-    console.log('conectado a la base de datos');
+    console.log('Conectado a la base de datos MONGODB');
 });
 
 const app: Express = express();
